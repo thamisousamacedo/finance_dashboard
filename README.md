@@ -1,4 +1,4 @@
-Protótipos de Interface para o Projeto Integrador HOw I - Univali:
+Protótipos de Interface para o Projeto Integrador HOW I - Univali:
 
 
 O sistema contará com:
