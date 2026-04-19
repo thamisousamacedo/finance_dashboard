@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financial API Dashboard</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <script src="/_sdk/element_sdk.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        font-family: "DM Sans", sans-serif;
+      }
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      :root {
+        --bg: #0b0f1a;
+        --surface: #131825;
+        --text: #e2e8f0;
+        --primary: #6366f1;
+        --secondary: #22d3ee;
+      }
+
+      .nav-item {
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+      }
+      .nav-item.active {
+        border-left-color: var(--primary);
+        background: rgba(99, 102, 241, 0.1);
+      }
+      .nav-item:hover {
+        background: rgba(99, 102, 241, 0.06);
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      }
+
+      .bar-chart-bar {
+        transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .drop-zone {
+        border: 2px dashed rgba(99, 102, 241, 0.4);
+        border-radius: 12px;
+        transition: all 0.3s;
+        background: rgba(99, 102, 241, 0.03);
+      }
+      .drop-zone.dragover {
+        border-color: var(--primary);
+        background: rgba(99, 102, 241, 0.1);
+        transform: scale(1.01);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .badge-success {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+      }
+      .badge-error {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+      }
+      .badge-warning {
+        background: rgba(234, 179, 8, 0.15);
+        color: #facc15;
+      }
+      .badge-info {
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+      }
+      .badge-pending {
+        background: rgba(148, 163, 184, 0.15);
+        color: #94a3b8;
+      }
+
+      .log-entry {
+        animation: slideIn 0.3s ease-out;
+      }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .fade-up {
+        animation: fadeUp 0.5s ease-out both;
+      }
+
+      .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 5px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+      }
+
+      .progress-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 1s ease-out;
+      }
+
+      .table-row {
+        transition: background 0.15s;
+      }
+      .table-row:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+    </style>
+    <style>
+      body {
+        box-sizing: border-box;
+      }
+    </style>
+    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  </head>
+  <body class="h-full" style="background: var(--bg); color: var(--text)">
+    <div id="app" class="h-full w-full flex overflow-hidden">
+      <!-- Sidebar -->
+      <aside
+        class="w-56 flex-shrink-0 flex flex-col"
+        style="
+          background: var(--surface);
+          border-right: 1px solid rgba(255, 255, 255, 0.06);
+        "
+      >
+        <div class="p-5 flex items-center gap-3">
+          <div
+            class="w-9 h-9 rounded-lg flex items-center justify-center"
+            style="background: var(--primary)"
+          >
+            <i
+              data-lucide="activity"
+              style="width: 18px; height: 18px; color: #fff"
+            ></i>
+          </div>
+          <div>
+            <div
+              id="sidebar-title"
+              class="font-bold text-sm"
+              style="color: var(--text)"
+            >
+              Financial API
+            </div>
+            <div class="text-[10px] opacity-40 uppercase tracking-wider">
+              Plataforma
+            </div>
+          </div>
+        </div>
+        <div
+          class="px-3 mt-2 text-[10px] uppercase tracking-wider opacity-30 mb-2 pl-5"
+        >
+          Menu
+        </div>
+        <nav class="flex-1 px-2 space-y-1">
+          <button
+            onclick="switchTab('dashboard')"
+            id="nav-dashboard"
+            class="nav-item active w-full text-left px-4 py-2.5 rounded-r-lg flex items-center gap-3 text-sm"
+          >
+            <i data-lucide="bar-chart-3" style="width: 16px; height: 16px"></i>
+            Dashboard
+          </button>
+          <button
+            onclick="switchTab('conciliacao')"
+            id="nav-conciliacao"
+            class="nav-item w-full text-left px-4 py-2.5 rounded-r-lg flex items-center gap-3 text-sm"
+          >
+            <i data-lucide="git-merge" style="width: 16px; height: 16px"></i>
+            Conciliação
+          </button>
+          <button
+            onclick="switchTab('cnab')"
+            id="nav-cnab"
+            class="nav-item w-full text-left px-4 py-2.5 rounded-r-lg flex items-center gap-3 text-sm"
+          >
+            <i data-lucide="file-text" style="width: 16px; height: 16px"></i>
+            Módulo CNAB
+          </button>
+        </nav>
+        <div
+          class="p-4 m-3 rounded-xl"
+          style="
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+          "
+        >
+          <div class="flex items-center gap-2 mb-2">
+            <div class="pulse-dot" style="background: #4ade80"></div>
+            <span class="text-xs font-medium opacity-70">API Online</span>
+          </div>
+          <div class="text-[10px] opacity-40">Latência: 23ms</div>
+        </div>
+      </aside>
+      <!-- Main Content -->
+      <main class="flex-1 flex flex-col overflow-auto scrollbar-thin">
+        <!-- Header -->
+        <header
+          class="flex items-center justify-between px-7 py-4 flex-shrink-0"
+          style="border-bottom: 1px solid rgba(255, 255, 255, 0.06)"
+        >
+          <div>
+            <h1
+              id="page-title"
+              class="text-lg font-bold"
+              style="color: var(--text)"
+            >
+              Visão Geral Financeira
+            </h1>
+            <p class="text-xs opacity-40 mt-0.5">Atualizado há 2 minutos</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              class="relative p-2 rounded-lg"
+              style="
+                background: var(--surface);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+              "
+            >
+              <i
+                data-lucide="bell"
+                style="width: 16px; height: 16px; opacity: 0.6"
+              ></i>
+              <span
+                class="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white"
+                style="background: #ef4444"
+                >3</span
+              >
+            </button>
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+              style="
+                background: linear-gradient(
+                  135deg,
+                  var(--primary),
+                  var(--secondary)
+                );
+              "
+            >
+              AF
+            </div>
+          </div>
+        </header>
+        <!-- Tab: Dashboard -->
+        <div id="tab-dashboard" class="flex-1 p-7 space-y-6">
+          <!-- KPI Cards -->
+          <div class="grid grid-cols-4 gap-4">
+            <div class="card p-5 fade-up" style="animation-delay: 0.05s">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs opacity-40 uppercase tracking-wider"
+                  >Previsto</span
+                >
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style="background: rgba(99, 102, 241, 0.12)"
+                >
+                  <i
+                    data-lucide="trending-up"
+                    style="width: 14px; height: 14px; color: var(--primary)"
+                  ></i>
+                </div>
+              </div>
+              <div class="text-2xl font-bold mono" style="color: var(--text)">
+                R$ 842K
+              </div>
+              <div class="text-xs mt-1" style="color: #4ade80">
+                +12.5%
+                <span class="opacity-40" style="color: var(--text)"
+                  >vs mês anterior</span
+                >
+              </div>
+            </div>
+            <div class="card p-5 fade-up" style="animation-delay: 0.1s">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs opacity-40 uppercase tracking-wider"
+                  >Liquidado</span
+                >
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style="background: rgba(34, 211, 238, 0.12)"
+                >
+                  <i
+                    data-lucide="check-circle"
+                    style="width: 14px; height: 14px; color: var(--secondary)"
+                  ></i>
+                </div>
+              </div>
+              <div class="text-2xl font-bold mono" style="color: var(--text)">
+                R$ 697K
+              </div>
+              <div class="text-xs mt-1" style="color: #facc15">
+                82.7%
+                <span class="opacity-40" style="color: var(--text)"
+                  >taxa de liquidação</span
+                >
+              </div>
+            </div>
+            <div class="card p-5 fade-up" style="animation-delay: 0.15s">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs opacity-40 uppercase tracking-wider"
+                  >Inadimplência</span
+                >
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style="background: rgba(239, 68, 68, 0.12)"
+                >
+                  <i
+                    data-lucide="alert-triangle"
+                    style="width: 14px; height: 14px; color: #f87171"
+                  ></i>
+                </div>
+              </div>
+              <div class="text-2xl font-bold mono" style="color: var(--text)">
+                R$ 145K
+              </div>
+              <div class="text-xs mt-1" style="color: #f87171">
+                17.3%
+                <span class="opacity-40" style="color: var(--text)"
+                  >do previsto</span
+                >
+              </div>
+            </div>
+            <div class="card p-5 fade-up" style="animation-delay: 0.2s">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs opacity-40 uppercase tracking-wider"
+                  >Conciliados</span
+                >
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style="background: rgba(34, 197, 94, 0.12)"
+                >
+                  <i
+                    data-lucide="shield-check"
+                    style="width: 14px; height: 14px; color: #4ade80"
+                  ></i>
+                </div>
+              </div>
+              <div class="text-2xl font-bold mono" style="color: var(--text)">
+                1.247
+              </div>
+              <div class="text-xs mt-1 opacity-40">títulos processados</div>
+            </div>
+          </div>
+          <!-- Chart Section -->
+          <div class="grid grid-cols-3 gap-4">
+            <div
+              class="col-span-2 card p-6 fade-up"
+              style="animation-delay: 0.25s"
+            >
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h3 class="font-semibold text-sm" style="color: var(--text)">
+                    Previsão vs Liquidação
+                  </h3>
+                  <p class="text-xs opacity-40 mt-0.5">
+                    Últimos 6 meses — valores em R$ mil
+                  </p>
+                </div>
+                <div class="flex gap-4 text-xs">
+                  <span class="flex items-center gap-1.5"
+                    ><span
+                      class="w-2.5 h-2.5 rounded-sm"
+                      style="background: var(--primary)"
+                    ></span>
+                    Previsto</span
+                  >
+                  <span class="flex items-center gap-1.5"
+                    ><span
+                      class="w-2.5 h-2.5 rounded-sm"
+                      style="background: var(--secondary)"
+                    ></span>
+                    Liquidado</span
+                  >
+                </div>
+              </div>
+              <div
+                id="bar-chart"
+                class="flex items-end justify-between gap-3"
+                style="height: 220px"
+              ></div>
+            </div>
+            <!-- Recent Activity -->
+            <div class="card p-6 fade-up" style="animation-delay: 0.3s">
+              <h3 class="font-semibold text-sm mb-4" style="color: var(--text)">
+                Atividade Recente
+              </h3>
+              <div class="space-y-4">
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style="background: rgba(34, 197, 94, 0.12)"
+                  >
+                    <i
+                      data-lucide="check"
+                      style="width: 12px; height: 12px; color: #4ade80"
+                    ></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-medium" style="color: var(--text)">
+                      CNAB 240 processado
+                    </div>
+                    <div class="text-[10px] opacity-40 mt-0.5">
+                      Banco do Brasil — há 5 min
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style="background: rgba(239, 68, 68, 0.12)"
+                  >
+                    <i
+                      data-lucide="x"
+                      style="width: 12px; height: 12px; color: #f87171"
+                    ></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-medium" style="color: var(--text)">
+                      Erro na remessa #4521
+                    </div>
+                    <div class="text-[10px] opacity-40 mt-0.5">
+                      Itaú — há 12 min
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style="background: rgba(99, 102, 241, 0.12)"
+                  >
+                    <i
+                      data-lucide="upload"
+                      style="width: 12px; height: 12px; color: var(--primary)"
+                    ></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-medium" style="color: var(--text)">
+                      XML NFe importado
+                    </div>
+                    <div class="text-[10px] opacity-40 mt-0.5">
+                      3 arquivos — há 18 min
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style="background: rgba(34, 211, 238, 0.12)"
+                  >
+                    <i
+                      data-lucide="refresh-cw"
+                      style="width: 12px; height: 12px; color: var(--secondary)"
+                    ></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-medium" style="color: var(--text)">
+                      Conciliação automática
+                    </div>
+                    <div class="text-[10px] opacity-40 mt-0.5">
+                      127 títulos — há 30 min
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style="background: rgba(234, 179, 8, 0.12)"
+                  >
+                    <i
+                      data-lucide="alert-circle"
+                      style="width: 12px; height: 12px; color: #facc15"
+                    ></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-medium" style="color: var(--text)">
+                      Divergência detectada
+                    </div>
+                    <div class="text-[10px] opacity-40 mt-0.5">
+                      R$ 2.340,00 — há 45 min
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Conciliação -->
+        <div
+          id="tab-conciliacao"
+          class="flex-1 p-7 space-y-6"
+          style="display: none"
+        >
+          <div class="grid grid-cols-2 gap-5">
+            <!-- Upload Zone -->
+            <div class="card p-6 fade-up">
+              <h3 class="font-semibold text-sm mb-1" style="color: var(--text)">
+                Upload de Arquivos XML
+              </h3>
+              <p class="text-xs opacity-40 mb-4">
+                Arraste arquivos NFe, CTe ou NFSe
+              </p>
+              <div
+                id="drop-zone"
+                class="drop-zone p-10 text-center cursor-pointer"
+              >
+                <div class="flex flex-col items-center">
+                  <div
+                    class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+                    style="background: rgba(99, 102, 241, 0.1)"
+                  >
+                    <i
+                      data-lucide="upload-cloud"
+                      style="width: 28px; height: 28px; color: var(--primary)"
+                    ></i>
+                  </div>
+                  <p
+                    class="text-sm font-medium mb-1"
+                    style="color: var(--text)"
+                  >
+                    Arraste seus XMLs aqui
+                  </p>
+                  <p class="text-xs opacity-40 mb-4">
+                    ou clique para selecionar
+                  </p>
+                  <div class="badge badge-info">XML • até 10MB</div>
+                </div>
+                <input
+                  type="file"
+                  id="file-input"
+                  class="hidden"
+                  accept=".xml"
+                  multiple
+                />
+              </div>
+              <!-- Uploaded Files -->
+              <div id="uploaded-files" class="mt-4 space-y-2"></div>
+            </div>
+            <!-- Processing Log -->
+            <div class="card p-6 fade-up" style="animation-delay: 0.1s">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="font-semibold text-sm" style="color: var(--text)">
+                    Log de Processamento
+                  </h3>
+                  <p class="text-xs opacity-40 mt-0.5">Eventos em tempo real</p>
+                </div>
+                <button
+                  onclick="clearLogs()"
+                  class="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg"
+                  style="
+                    background: rgba(255, 255, 255, 0.05);
+                    color: var(--text);
+                  "
+                >
+                  Limpar
+                </button>
+              </div>
+              <div
+                id="log-container"
+                class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin"
+              >
+                <div
+                  class="log-entry flex items-start gap-2 p-2.5 rounded-lg"
+                  style="background: rgba(34, 197, 94, 0.06)"
+                >
+                  <span class="text-[10px] mono opacity-40 mt-0.5 flex-shrink-0"
+                    >14:32:01</span
+                  >
+                  <span class="text-xs"
+                    ><span style="color: #4ade80">✓</span> NFe 35241100001234
+                    processada com sucesso</span
+                  >
+                </div>
+                <div
+                  class="log-entry flex items-start gap-2 p-2.5 rounded-lg"
+                  style="background: rgba(239, 68, 68, 0.06)"
+                >
+                  <span class="text-[10px] mono opacity-40 mt-0.5 flex-shrink-0"
+                    >14:31:47</span
+                  >
+                  <span class="text-xs"
+                    ><span style="color: #f87171">✗</span> Erro schema: campo
+                    &lt;vNF&gt; ausente no XML</span
+                  >
+                </div>
+                <div
+                  class="log-entry flex items-start gap-2 p-2.5 rounded-lg"
+                  style="background: rgba(99, 102, 241, 0.06)"
+                >
+                  <span class="text-[10px] mono opacity-40 mt-0.5 flex-shrink-0"
+                    >14:31:22</span
+                  >
+                  <span class="text-xs"
+                    ><span style="color: var(--primary)">⟳</span> Conciliação
+                    iniciada para lote #847</span
+                  >
+                </div>
+                <div
+                  class="log-entry flex items-start gap-2 p-2.5 rounded-lg"
+                  style="background: rgba(34, 197, 94, 0.06)"
+                >
+                  <span class="text-[10px] mono opacity-40 mt-0.5 flex-shrink-0"
+                    >14:30:55</span
+                  >
+                  <span class="text-xs"
+                    ><span style="color: #4ade80">✓</span> 3 XMLs validados —
+                    schema OK</span
+                  >
+                </div>
+                <div
+                  class="log-entry flex items-start gap-2 p-2.5 rounded-lg"
+                  style="background: rgba(234, 179, 8, 0.06)"
+                >
+                  <span class="text-[10px] mono opacity-40 mt-0.5 flex-shrink-0"
+                    >14:30:12</span
+                  >
+                  <span class="text-xs"
+                    ><span style="color: #facc15">⚠</span> Divergência de R$
+                    45,00 no título #12903</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Conciliation Table -->
+          <div class="card p-6 fade-up" style="animation-delay: 0.15s">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-sm" style="color: var(--text)">
+                Títulos em Conciliação
+              </h3>
+              <div class="flex gap-2">
+                <span class="badge badge-success">127 conciliados</span>
+                <span class="badge badge-warning">8 divergentes</span>
+                <span class="badge badge-pending">12 pendentes</span>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr
+                    style="border-bottom: 1px solid rgba(255, 255, 255, 0.06)"
+                  >
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Título
+                    </th>
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Pagador
+                    </th>
+                    <th
+                      class="text-right py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Valor NFe
+                    </th>
+                    <th
+                      class="text-right py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Valor Pago
+                    </th>
+                    <th
+                      class="text-center py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    class="table-row"
+                    style="border-bottom: 1px solid rgba(255, 255, 255, 0.03)"
+                  >
+                    <td class="py-3 px-3 mono">#12847</td>
+                    <td class="py-3 px-3">Tech Solutions LTDA</td>
+                    <td class="py-3 px-3 text-right mono">R$ 15.420,00</td>
+                    <td class="py-3 px-3 text-right mono">R$ 15.420,00</td>
+                    <td class="py-3 px-3 text-center">
+                      <span class="badge badge-success">Conciliado</span>
+                    </td>
+                  </tr>
+                  <tr
+                    class="table-row"
+                    style="border-bottom: 1px solid rgba(255, 255, 255, 0.03)"
+                  >
+                    <td class="py-3 px-3 mono">#12903</td>
+                    <td class="py-3 px-3">Distribuidora ABC S.A.</td>
+                    <td class="py-3 px-3 text-right mono">R$ 8.750,00</td>
+                    <td
+                      class="py-3 px-3 text-right mono"
+                      style="color: #facc15"
+                    >
+                      R$ 8.705,00
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                      <span class="badge badge-warning">Divergente</span>
+                    </td>
+                  </tr>
+                  <tr
+                    class="table-row"
+                    style="border-bottom: 1px solid rgba(255, 255, 255, 0.03)"
+                  >
+                    <td class="py-3 px-3 mono">#12955</td>
+                    <td class="py-3 px-3">Indústria Nova Era ME</td>
+                    <td class="py-3 px-3 text-right mono">R$ 3.200,00</td>
+                    <td class="py-3 px-3 text-right mono opacity-30">—</td>
+                    <td class="py-3 px-3 text-center">
+                      <span class="badge badge-pending">Pendente</span>
+                    </td>
+                  </tr>
+                  <tr class="table-row">
+                    <td class="py-3 px-3 mono">#13001</td>
+                    <td class="py-3 px-3">Logística Express LTDA</td>
+                    <td class="py-3 px-3 text-right mono">R$ 22.100,00</td>
+                    <td class="py-3 px-3 text-right mono">R$ 22.100,00</td>
+                    <td class="py-3 px-3 text-center">
+                      <span class="badge badge-success">Conciliado</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: CNAB -->
+        <div id="tab-cnab" class="flex-1 p-7 space-y-6" style="display: none">
+          <!-- CNAB Summary -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="card p-5 fade-up">
+              <div class="flex items-center gap-3 mb-3">
+                <div
+                  class="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style="background: rgba(99, 102, 241, 0.12)"
+                >
+                  <i
+                    data-lucide="send"
+                    style="width: 18px; height: 18px; color: var(--primary)"
+                  ></i>
+                </div>
+                <div>
+                  <div class="text-xs opacity-40">Remessas Hoje</div>
+                  <div
+                    class="text-xl font-bold mono"
+                    style="color: var(--text)"
+                  >
+                    14
+                  </div>
+                </div>
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-bar-fill"
+                  style="width: 85%; background: var(--primary)"
+                ></div>
+              </div>
+              <div class="text-[10px] opacity-40 mt-1.5">
+                12 enviadas • 2 aguardando
+              </div>
+            </div>
+            <div class="card p-5 fade-up" style="animation-delay: 0.05s">
+              <div class="flex items-center gap-3 mb-3">
+                <div
+                  class="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style="background: rgba(34, 211, 238, 0.12)"
+                >
+                  <i
+                    data-lucide="download"
+                    style="width: 18px; height: 18px; color: var(--secondary)"
+                  ></i>
+                </div>
+                <div>
+                  <div class="text-xs opacity-40">Retornos Hoje</div>
+                  <div
+                    class="text-xl font-bold mono"
+                    style="color: var(--text)"
+                  >
+                    9
+                  </div>
+                </div>
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-bar-fill"
+                  style="width: 64%; background: var(--secondary)"
+                ></div>
+              </div>
+              <div class="text-[10px] opacity-40 mt-1.5">
+                7 processados • 2 com erro
+              </div>
+            </div>
+            <div class="card p-5 fade-up" style="animation-delay: 0.1s">
+              <div class="flex items-center gap-3 mb-3">
+                <div
+                  class="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style="background: rgba(239, 68, 68, 0.12)"
+                >
+                  <i
+                    data-lucide="alert-octagon"
+                    style="width: 18px; height: 18px; color: #f87171"
+                  ></i>
+                </div>
+                <div>
+                  <div class="text-xs opacity-40">Erros Pendentes</div>
+                  <div class="text-xl font-bold mono" style="color: #f87171">
+                    5
+                  </div>
+                </div>
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-bar-fill"
+                  style="width: 22%; background: #f87171"
+                ></div>
+              </div>
+              <div class="text-[10px] opacity-40 mt-1.5">
+                Requer ação manual
+              </div>
+            </div>
+          </div>
+          <!-- CNAB Table -->
+          <div class="card p-6 fade-up" style="animation-delay: 0.15s">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-semibold text-sm" style="color: var(--text)">
+                  Remessas e Retornos CNAB
+                </h3>
+                <p class="text-xs opacity-40 mt-0.5">
+                  Formato CNAB 240 / CNAB 400
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  onclick="filterCnab('all')"
+                  id="filter-all"
+                  class="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg font-medium"
+                  style="background: var(--primary); color: #fff"
+                >
+                  Todos
+                </button>
+                <button
+                  onclick="filterCnab('error')"
+                  id="filter-error"
+                  class="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg font-medium"
+                  style="
+                    background: rgba(255, 255, 255, 0.05);
+                    color: var(--text);
+                  "
+                >
+                  Erros
+                </button>
+                <button
+                  onclick="filterCnab('pending')"
+                  id="filter-pending"
+                  class="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg font-medium"
+                  style="
+                    background: rgba(255, 255, 255, 0.05);
+                    color: var(--text);
+                  "
+                >
+                  Pendentes
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs" id="cnab-table">
+                <thead>
+                  <tr
+                    style="border-bottom: 1px solid rgba(255, 255, 255, 0.06)"
+                  >
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Arquivo
+                    </th>
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Banco
+                    </th>
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Tipo
+                    </th>
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Formato
+                    </th>
+                    <th
+                      class="text-right py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Registros
+                    </th>
+                    <th
+                      class="text-center py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Status
+                    </th>
+                    <th
+                      class="text-left py-3 px-3 opacity-40 font-medium uppercase tracking-wider text-[10px]"
+                    >
+                      Erro
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="cnab-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Error Detail Panel -->
+          <div
+            id="error-panel"
+            class="card p-6 fade-up"
+            style="
+              display: none;
+              animation-delay: 0.2s;
+              border-left: 3px solid #f87171;
+            "
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <i
+                  data-lucide="alert-triangle"
+                  style="width: 16px; height: 16px; color: #f87171"
+                ></i>
+                <h3 class="font-semibold text-sm" style="color: #f87171">
+                  Detalhe do Erro
+                </h3>
+              </div>
+              <button
+                onclick="document.getElementById('error-panel').style.display='none'"
+                class="opacity-40 hover:opacity-100"
+              >
+                <i data-lucide="x" style="width: 16px; height: 16px"></i>
+              </button>
+            </div>
+            <div id="error-detail" class="text-xs space-y-2"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      // === CONFIG & SDK ===
+      const defaultConfig = {
+        background_color: "#0b0f1a",
+        surface_color: "#131825",
+        text_color: "#e2e8f0",
+        primary_color: "#6366f1",
+        secondary_color: "#22d3ee",
+        font_family: "DM Sans",
+        font_size: 14,
+        app_title: "Financial API",
+        dashboard_subtitle: "Visão Geral Financeira",
+      };
+
+      function applyConfig(cfg) {
+        const root = document.documentElement;
+        root.style.setProperty(
+          "--bg",
+          cfg.background_color || defaultConfig.background_color
+        );
+        root.style.setProperty(
+          "--surface",
+          cfg.surface_color || defaultConfig.surface_color
+        );
+        root.style.setProperty(
+          "--text",
+          cfg.text_color || defaultConfig.text_color
+        );
+        root.style.setProperty(
+          "--primary",
+          cfg.primary_color || defaultConfig.primary_color
+        );
+        root.style.setProperty(
+          "--secondary",
+          cfg.secondary_color || defaultConfig.secondary_color
+        );
+
+        const font = cfg.font_family || defaultConfig.font_family;
+        document.body.style.fontFamily = `${font}, sans-serif`;
+
+        const size = cfg.font_size || defaultConfig.font_size;
+        document.body.style.fontSize = size + "px";
+
+        document.getElementById("sidebar-title").textContent =
+          cfg.app_title || defaultConfig.app_title;
+        document.getElementById("page-title").textContent =
+          cfg.dashboard_subtitle || defaultConfig.dashboard_subtitle;
+
+        // Update all text-colored elements
+        document
+          .querySelectorAll('[style*="color: var(--text)"]')
+          .forEach((el) => {
+            el.style.color = cfg.text_color || defaultConfig.text_color;
+          });
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange: async (config) => {
+            applyConfig(config);
+          },
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () =>
+                  config.background_color || defaultConfig.background_color,
+                set: (v) => {
+                  config.background_color = v;
+                  window.elementSdk.setConfig({ background_color: v });
+                },
+              },
+              {
+                get: () => config.surface_color || defaultConfig.surface_color,
+                set: (v) => {
+                  config.surface_color = v;
+                  window.elementSdk.setConfig({ surface_color: v });
+                },
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (v) => {
+                  config.text_color = v;
+                  window.elementSdk.setConfig({ text_color: v });
+                },
+              },
+              {
+                get: () => config.primary_color || defaultConfig.primary_color,
+                set: (v) => {
+                  config.primary_color = v;
+                  window.elementSdk.setConfig({ primary_color: v });
+                },
+              },
+              {
+                get: () =>
+                  config.secondary_color || defaultConfig.secondary_color,
+                set: (v) => {
+                  config.secondary_color = v;
+                  window.elementSdk.setConfig({ secondary_color: v });
+                },
+              },
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (v) => {
+                config.font_family = v;
+                window.elementSdk.setConfig({ font_family: v });
+              },
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (v) => {
+                config.font_size = v;
+                window.elementSdk.setConfig({ font_size: v });
+              },
+            },
+          }),
+          mapToEditPanelValues: (config) =>
+            new Map([
+              ["app_title", config.app_title || defaultConfig.app_title],
+              [
+                "dashboard_subtitle",
+                config.dashboard_subtitle || defaultConfig.dashboard_subtitle,
+              ],
+            ]),
+        });
+      }
+
+      // === NAVIGATION ===
+      let currentTab = "dashboard";
+      function switchTab(tab) {
+        document
+          .querySelectorAll('[id^="tab-"]')
+          .forEach((t) => (t.style.display = "none"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((n) => n.classList.remove("active"));
+        document.getElementById("tab-" + tab).style.display = "";
+        document.getElementById("nav-" + tab).classList.add("active");
+        currentTab = tab;
+        const titles = {
+          dashboard: "Visão Geral Financeira",
+          conciliacao: "Conciliação de Documentos",
+          cnab: "Módulo CNAB",
+        };
+        document.getElementById("page-title").textContent = titles[tab];
+      }
+
+      // === BAR CHART ===
+      const chartData = [
+        { month: "Jul", prev: 120, liq: 98 },
+        { month: "Ago", prev: 145, liq: 121 },
+        { month: "Set", prev: 132, liq: 115 },
+        { month: "Out", prev: 168, liq: 142 },
+        { month: "Nov", prev: 155, liq: 127 },
+        { month: "Dez", prev: 182, liq: 149 },
+      ];
+      function renderChart() {
+        const container = document.getElementById("bar-chart");
+        const max = Math.max(...chartData.map((d) => d.prev));
+        container.innerHTML = chartData
+          .map(
+            (d) => `
+      <div class="flex-1 flex flex-col items-center gap-1.5" style="height:100%;">
+        <div class="flex-1 flex items-end gap-1.5 w-full">
+          <div class="flex-1 rounded-t-md bar-chart-bar" style="height:${
+            (d.prev / max) * 100
+          }%;background:var(--primary);opacity:0.8;"></div>
+          <div class="flex-1 rounded-t-md bar-chart-bar" style="height:${
+            (d.liq / max) * 100
+          }%;background:var(--secondary);opacity:0.8;"></div>
+        </div>
+        <div class="text-[10px] opacity-40 font-medium">${d.month}</div>
+        <div class="text-[9px] mono opacity-30">${d.prev}K / ${d.liq}K</div>
+      </div>
+    `
+          )
+          .join("");
+      }
+
+      // === DRAG & DROP ===
+      function setupDropZone() {
+        const zone = document.getElementById("drop-zone");
+        const input = document.getElementById("file-input");
+
+        zone.addEventListener("click", () => input.click());
+        zone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zone.classList.add("dragover");
+        });
+        zone.addEventListener("dragleave", () =>
+          zone.classList.remove("dragover")
+        );
+        zone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          zone.classList.remove("dragover");
+          handleFiles(e.dataTransfer.files);
+        });
+        input.addEventListener("change", (e) => handleFiles(e.target.files));
+      }
+
+      function handleFiles(files) {
+        const container = document.getElementById("uploaded-files");
+        Array.from(files).forEach((file) => {
+          const div = document.createElement("div");
+          div.className = "flex items-center justify-between p-3 rounded-lg";
+          div.style.cssText =
+            "background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);animation:slideIn 0.3s ease-out;";
+          const isXml = file.name.endsWith(".xml");
+          div.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:${
+            isXml ? "rgba(99,102,241,0.12)" : "rgba(239,68,68,0.12)"
+          };">
+            <i data-lucide="${
+              isXml ? "file-text" : "file-warning"
+            }" style="width:14px;height:14px;color:${
+            isXml ? "var(--primary)" : "#f87171"
+          };"></i>
+          </div>
+          <div>
+            <div class="text-xs font-medium">${file.name}</div>
+            <div class="text-[10px] opacity-40">${(file.size / 1024).toFixed(
+              1
+            )} KB</div>
+          </div>
+        </div>
+        <span class="badge ${isXml ? "badge-success" : "badge-error"}">${
+            isXml ? "Válido" : "Inválido"
+          }</span>
+      `;
+          container.appendChild(div);
+          addLog(
+            isXml ? "success" : "error",
+            isXml
+              ? `Arquivo ${file.name} importado`
+              : `${file.name} — formato inválido`
+          );
+          lucide.createIcons();
+        });
+      }
+
+      function addLog(type, msg) {
+        const container = document.getElementById("log-container");
+        const colors = {
+          success: { bg: "rgba(34,197,94,0.06)", icon: "#4ade80", sym: "✓" },
+          error: { bg: "rgba(239,68,68,0.06)", icon: "#f87171", sym: "✗" },
+          info: {
+            bg: "rgba(99,102,241,0.06)",
+            icon: "var(--primary)",
+            sym: "⟳",
+          },
+        };
+        const c = colors[type] || colors.info;
+        const now = new Date();
+        const time = `${now.getHours().toString().padStart(2, "0")}:${now
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+        const div = document.createElement("div");
+        div.className = "log-entry flex items-start gap-2 p-2.5 rounded-lg";
+        div.style.background = c.bg;
+        div.innerHTML = `<span class="text-[10px] mono opacity-40 mt-0.5 flex-shrink-0">${time}</span><span class="text-xs"><span style="color:${c.icon};">${c.sym}</span> ${msg}</span>`;
+        container.insertBefore(div, container.firstChild);
+      }
+
+      function clearLogs() {
+        document.getElementById("log-container").innerHTML =
+          '<div class="text-center py-8 opacity-30 text-xs">Nenhum evento registrado</div>';
+      }
+
+      // === CNAB MODULE ===
+      const cnabData = [
+        {
+          file: "REM_BB_20241215.txt",
+          bank: "Banco do Brasil",
+          type: "Remessa",
+          format: "CNAB 240",
+          records: 342,
+          status: "success",
+          error: "",
+        },
+        {
+          file: "RET_ITAU_20241215.txt",
+          bank: "Itaú",
+          type: "Retorno",
+          format: "CNAB 400",
+          records: 128,
+          status: "error",
+          error:
+            "Registro tipo 1 inválido na posição 234 — campo CNPJ com dígito verificador incorreto",
+        },
+        {
+          file: "REM_BRAD_20241215.txt",
+          bank: "Bradesco",
+          type: "Remessa",
+          format: "CNAB 240",
+          records: 89,
+          status: "success",
+          error: "",
+        },
+        {
+          file: "RET_SANT_20241215.txt",
+          bank: "Santander",
+          type: "Retorno",
+          format: "CNAB 240",
+          records: 215,
+          status: "pending",
+          error: "",
+        },
+        {
+          file: "REM_CEF_20241215.txt",
+          bank: "Caixa",
+          type: "Remessa",
+          format: "CNAB 240",
+          records: 56,
+          status: "success",
+          error: "",
+        },
+        {
+          file: "RET_BB_20241215.txt",
+          bank: "Banco do Brasil",
+          type: "Retorno",
+          format: "CNAB 240",
+          records: 340,
+          status: "error",
+          error:
+            "Trailer do lote com soma de valores divergente — esperado R$ 154.320,00, recebido R$ 151.980,00",
+        },
+        {
+          file: "REM_ITAU_20241214.txt",
+          bank: "Itaú",
+          type: "Remessa",
+          format: "CNAB 400",
+          records: 198,
+          status: "success",
+          error: "",
+        },
+        {
+          file: "RET_BRAD_20241214.txt",
+          bank: "Bradesco",
+          type: "Retorno",
+          format: "CNAB 240",
+          records: 74,
+          status: "warning",
+          error:
+            "3 registros com código de ocorrência 02 — entrada confirmada com pendência",
+        },
+      ];
+
+      let cnabFilter = "all";
+      function filterCnab(filter) {
+        cnabFilter = filter;
+        document.querySelectorAll('[id^="filter-"]').forEach((b) => {
+          b.style.background = "rgba(255,255,255,0.05)";
+          b.style.color = "var(--text)";
+        });
+        document.getElementById("filter-" + filter).style.background =
+          "var(--primary)";
+        document.getElementById("filter-" + filter).style.color = "#fff";
+        renderCnab();
+      }
+
+      function renderCnab() {
+        const body = document.getElementById("cnab-body");
+        const filtered =
+          cnabFilter === "all"
+            ? cnabData
+            : cnabData.filter((d) => d.status === cnabFilter);
+        const badgeMap = {
+          success: "badge-success",
+          error: "badge-error",
+          warning: "badge-warning",
+          pending: "badge-pending",
+        };
+        const labelMap = {
+          success: "Processado",
+          error: "Erro",
+          warning: "Atenção",
+          pending: "Pendente",
+        };
+
+        body.innerHTML = filtered
+          .map(
+            (d, i) => `
+      <tr class="table-row ${
+        d.status === "error" ? "cursor-pointer" : ""
+      }" style="border-bottom:1px solid rgba(255,255,255,0.03);" ${
+              d.status === "error" || d.status === "warning"
+                ? `onclick="showError(${i})"`
+                : ""
+            }> 
+        <td class="py-3 px-3 mono text-xs">${d.file}</td>
+        <td class="py-3 px-3 text-xs">${d.bank}</td>
+        <td class="py-3 px-3"><span class="badge ${
+          d.type === "Remessa" ? "badge-info" : "badge-pending"
+        }">${d.type}</span></td>
+        <td class="py-3 px-3 mono text-xs opacity-60">${d.format}</td>
+        <td class="py-3 px-3 text-right mono text-xs">${d.records}</td>
+        <td class="py-3 px-3 text-center"><span class="badge ${
+          badgeMap[d.status]
+        }">${labelMap[d.status]}</span></td>
+        <td class="py-3 px-3 text-xs">${
+          d.error
+            ? '<span style="color:#f87171;cursor:pointer;">Ver detalhe →</span>'
+            : '<span class="opacity-20">—</span>'
+        }</td>
+      </tr>
+    `
+          )
+          .join("");
+      }
+
+      function showError(idx) {
+        const filtered =
+          cnabFilter === "all"
+            ? cnabData
+            : cnabData.filter((d) => d.status === cnabFilter);
+        const d = filtered[idx];
+        if (!d || !d.error) return;
+        const panel = document.getElementById("error-panel");
+        panel.style.display = "";
+        document.getElementById("error-detail").innerHTML = `
+      <div class="p-3 rounded-lg" style="background:rgba(239,68,68,0.06);">
+        <div class="mono text-[10px] opacity-40 mb-1">Arquivo</div>
+        <div class="font-medium">${d.file}</div>
+      </div>
+      <div class="p-3 rounded-lg" style="background:rgba(239,68,68,0.06);">
+        <div class="mono text-[10px] opacity-40 mb-1">Banco / Formato</div>
+        <div class="font-medium">${d.bank} — ${d.format}</div>
+      </div>
+      <div class="p-3 rounded-lg" style="background:rgba(239,68,68,0.06);">
+        <div class="mono text-[10px] opacity-40 mb-1">Descrição do Erro</div>
+        <div class="font-medium">${d.error}</div>
+      </div>
+      <div class="flex gap-2 mt-2">
+        <button class="px-4 py-2 rounded-lg text-xs font-medium text-white" style="background:var(--primary);">Reprocessar</button>
+        <button class="px-4 py-2 rounded-lg text-xs font-medium" style="background:rgba(255,255,255,0.05);color:var(--text);">Ignorar Erro</button>
+      </div>
+    `;
+        panel.scrollIntoView({ behavior: "smooth" });
+        lucide.createIcons();
+      }
+
+      // === INIT ===
+      document.addEventListener("DOMContentLoaded", () => {
+        renderChart();
+        setupDropZone();
+        renderCnab();
+        lucide.createIcons();
+      });
+    </script>
+    <script>
+      (function () {
+        function c() {
+          var b = a.contentDocument || a.contentWindow.document;
+          if (b) {
+            var d = b.createElement("script");
+            d.innerHTML =
+              "window.__CF$cv$params={r:'9ee8177462df4d47',t:'MTc3NjU2MTY3Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+            b.getElementsByTagName("head")[0].appendChild(d);
+          }
+        }
+        if (document.body) {
+          var a = document.createElement("iframe");
+          a.height = 1;
+          a.width = 1;
+          a.style.position = "absolute";
+          a.style.top = 0;
+          a.style.left = 0;
+          a.style.border = "none";
+          a.style.visibility = "hidden";
+          document.body.appendChild(a);
+          if ("loading" !== document.readyState) c();
+          else if (window.addEventListener)
+            document.addEventListener("DOMContentLoaded", c);
+          else {
+            var e = document.onreadystatechange || function () {};
+            document.onreadystatechange = function (b) {
+              e(b);
+              "loading" !== document.readyState &&
+                ((document.onreadystatechange = e), c());
+            };
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
